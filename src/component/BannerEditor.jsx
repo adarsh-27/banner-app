@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import html2canvas from "html2canvas";
+import { toPng } from 'html-to-image';
 import "./BannerEditor.css";
 
 export default function BannerEditor() {
@@ -54,25 +54,40 @@ export default function BannerEditor() {
     
   const handleDownload = () => {
     if (bannerRef.current) {
+      // Temporarily hide controls
       const controls = document.querySelector('.controls');
-      controls.style.visibility = 'hidden';
+      if (controls) controls.style.visibility = 'hidden';
       
-      html2canvas(bannerRef.current, {
-        useCORS: true,
-        scale: 4, 
-        backgroundColor: null, 
-        logging: false,
-        allowTaint: true
-      }).then((canvas) => {
-          if (controls) controls.style.visibility = 'visible';
+      // Create a high-resolution version of the banner
+      const originalWidth = bannerRef.current.offsetWidth;
+      const originalHeight = bannerRef.current.offsetHeight;
+      
+      // Scale up for higher resolution
+      const scale = 3;
+      
+      toPng(bannerRef.current, {
+        width: originalWidth * scale,
+        height: originalHeight * scale,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: `${originalWidth}px`,
+          height: `${originalHeight}px`
+        },
+        pixelRatio: 2 // Higher pixel ratio for better quality
+      })
+      .then((dataUrl) => {
+        // Restore controls visibility
+        if (controls) controls.style.visibility = 'visible';
         
-        const link = document.createElement("a");
-        link.download = "banner.png";
-        link.href = canvas.toDataURL("image/png", 1.0); 
+        const link = document.createElement('a');
+        link.download = 'banner.png';
+        link.href = dataUrl;
         link.click();
-
-        setUserImage(null);
-        setUserName("");
+      })
+      .catch((error) => {
+        console.error('Error generating image:', error);
+        if (controls) controls.style.visibility = 'visible';
       });
     }
   };
@@ -89,7 +104,7 @@ export default function BannerEditor() {
     bottom: `${dimensions.height * 0.095}px`,
     left: `${dimensions.width * 0.74}px`,
     width: `${dimensions.width * 0.39}px`,
-    fontSize: `${Math.max(12, dimensions.width * 0.001)}px`
+    fontSize: `${Math.max(12, dimensions.width * 0.04)}px` // Fixed font size calculation
   };
 
   return (
